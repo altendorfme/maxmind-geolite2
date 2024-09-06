@@ -14,9 +14,9 @@ Based on [P3TERX/GeoLite.mmdb](https://github.com/P3TERX/GeoLite.mmdb)
 
 ### TAR.GZ
 
-- [GeoLite2-ASN.mmdb](https://github.com/altendorfme/maxmid-geolite2/raw/download/GeoLite2-ASN.tar.gz)
-- [GeoLite2-City.mmdb](https://github.com/altendorfme/maxmid-geolite2/raw/download/GeoLite2-City.tar.gz)
-- [GeoLite2-Country.mmdb](https://github.com/altendorfme/maxmid-geolite2/raw/download/GeoLite2-Country.tar.gz)
+- [GeoLite2-ASN.tar.gz](https://github.com/altendorfme/maxmid-geolite2/raw/download/GeoLite2-ASN.tar.gz)
+- [GeoLite2-City.tar.gz](https://github.com/altendorfme/maxmid-geolite2/raw/download/GeoLite2-City.tar.gz)
+- [GeoLite2-Country.tar.gz](https://github.com/altendorfme/maxmid-geolite2/raw/download/GeoLite2-Country.tar.gz)
 
 ## License
 
