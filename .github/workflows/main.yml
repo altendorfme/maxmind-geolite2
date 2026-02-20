@@ -41,6 +41,10 @@ jobs:
     timeout-minutes: 10
 
     steps:
+      - name: Install Git LFS
+        run: |
+          git lfs install
+
       - name: Download MaxMind GeoLite2 Databases
         env:
           LICENSE_KEY: ${{ secrets.LICENSE_KEY }}
@@ -72,16 +76,26 @@ jobs:
 
           echo "TAG_NAME=$(date +"%Y.%m.%d")" >> $GITHUB_ENV
 
-      - name: Push to "download" branch
+      - name: Push to "download" branch with Git LFS
         run: |
           set -e
           cd upload
+
           git init
           git config user.name "${{ github.actor }}"
           git config user.email "${{ github.actor }}@users.noreply.github.com"
+
+          # Enable LFS tracking
+          git lfs install
+          git lfs track "*.mmdb"
+
+          git add .gitattributes
+          git add *.mmdb
+          git add *.tar.gz
+
           git checkout -b download
-          git add .
           git commit -m "${{ env.TAG_NAME }}"
+
           git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
           git push -f origin download
 
