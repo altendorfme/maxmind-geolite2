@@ -38,53 +38,74 @@ on:
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
 
     steps:
-    - name: Download Maxmind GeoLite2 Files
-      run: |
-        wget -qO GeoLite2-ASN.tar.gz "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-ASN&license_key=${{ secrets.LICENSE_KEY }}&suffix=tar.gz" -o GeoLite2-ASN.tar.gz
-        wget -qO GeoLite2-City.tar.gz "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${{ secrets.LICENSE_KEY }}&suffix=tar.gz" -o GeoLite2-City.tar.gz
-        wget -qO GeoLite2-Country.tar.gz "https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-Country&license_key=${{ secrets.LICENSE_KEY }}&suffix=tar.gz" -o GeoLite2-Country.tar.gz
-        for file in *.tar.gz; do tar -xzvf "$file"; done
-        mkdir -p upload
-        cp -v GeoLite*/*.mmdb upload
-        cp -v *.tar.gz upload
-        echo "TAG_NAME=$(date +"%Y.%m.%d")" >> $GITHUB_ENV
+      - name: Download MaxMind GeoLite2 Databases
+        env:
+          LICENSE_KEY: ${{ secrets.LICENSE_KEY }}
+        run: |
+          set -euo pipefail
 
-    - name: Push to "download" branch
-      run: |
-        cd upload
-        git init
-        git config user.name "${{ github.actor }}"
-        git config user.email "${{ github.actor }}@users.noreply.github.com"
-        git checkout -b download
-        git add .
-        git commit -m "${{ env.TAG_NAME }}"
-        git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
-        git push -f origin download
+          BASE_URL="https://download.maxmind.com/app/geoip_download"
 
-    - name: Upload to releases
-      uses: softprops/action-gh-release@master
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ env.TAG_NAME }}
-        body: ${{ env.TAG_NAME }}
-        files: |
-          upload/*.mmdb
-          upload/*.tar.gz
+          download() {
+            edition=$1
+            echo "Downloading $edition..."
+            curl -fL --retry 3 \
+              "${BASE_URL}?edition_id=${edition}&license_key=${LICENSE_KEY}&suffix=tar.gz" \
+              -o "${edition}.tar.gz"
+          }
 
-    - name: Remove old releases
-      uses: dev-drprasad/delete-older-releases@master
-      with:
-        keep_latest: 2
-        delete_tags: true
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          download "GeoLite2-ASN"
+          download "GeoLite2-City"
+          download "GeoLite2-Country"
 
-    - name: Delete workflow runs
-      uses: Mattraks/delete-workflow-runs@main
-      with:
-        retain_days: 0
-        keep_minimum_runs: 2
+          for file in *.tar.gz; do
+            tar -xzf "$file"
+          done
+
+          mkdir -p upload
+
+          find . -type f -name "*.mmdb" -exec cp -v {} upload/ \;
+          cp -v *.tar.gz upload/
+
+          echo "TAG_NAME=$(date +"%Y.%m.%d")" >> $GITHUB_ENV
+
+      - name: Push to "download" branch
+        run: |
+          set -e
+          cd upload
+          git init
+          git config user.name "${{ github.actor }}"
+          git config user.email "${{ github.actor }}@users.noreply.github.com"
+          git checkout -b download
+          git add .
+          git commit -m "${{ env.TAG_NAME }}"
+          git remote add origin "https://${{ github.actor }}:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}"
+          git push -f origin download
+
+      - name: Upload to releases
+        uses: softprops/action-gh-release@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ env.TAG_NAME }}
+          body: ${{ env.TAG_NAME }}
+          files: |
+            upload/*.mmdb
+            upload/*.tar.gz
+
+      - name: Remove old releases
+        uses: dev-drprasad/delete-older-releases@v0.3.3
+        with:
+          keep_latest: 2
+          delete_tags: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete workflow runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          retain_days: 0
+          keep_minimum_runs: 2
